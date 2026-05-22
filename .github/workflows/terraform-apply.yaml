@@ -50,8 +50,25 @@ jobs:
           opa eval \
             --data policy/okta.rego \
             --input plan.json \
-            "data.okta.guardrails.deny" \
-            --fail-defined
+            "data.okta.guardrails.deny"
+
+          violations=$(opa eval \
+            --format raw \
+            --data policy/okta.rego \
+            --input plan.json \
+            "count(data.okta.guardrails.deny)")
+
+          if [ "$violations" -gt 0 ]; then
+            echo "OPA policy check failed. Violations found:"
+            opa eval \
+              --format pretty \
+              --data policy/okta.rego \
+              --input plan.json \
+              "data.okta.guardrails.deny"
+            exit 1
+          fi
+
+          echo "OPA policy check passed. No violations found."
 
       - name: Terraform apply
         run: terraform apply -input=false -auto-approve tfplan
