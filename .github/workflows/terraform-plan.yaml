@@ -1,11 +1,13 @@
-name: Terraform Apply
+name: Terraform Plan
 
 on:
-  push:
+  pull_request:
     branches: [ "master" ]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
+  pull-requests: write
 
 env:
   TF_IN_AUTOMATION: true
@@ -14,7 +16,7 @@ env:
   TF_VAR_okta_api_token: ${{ secrets.OKTA_API_TOKEN }}
 
 jobs:
-  apply:
+  terraform-plan:
     runs-on: ubuntu-latest
 
     steps:
@@ -69,6 +71,3 @@ jobs:
           fi
 
           echo "OPA policy check passed. No violations found."
-
-      - name: Terraform apply
-        run: terraform apply -input=false -auto-approve tfplan
