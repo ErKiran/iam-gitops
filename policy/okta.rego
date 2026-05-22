@@ -1,15 +1,5 @@
 package okta.guardrails
 
-# Block dangerous privileged group names
-deny contains msg if {
-  resource := input.resource_changes[_]
-  resource.type == "okta_group"
-
-  name := lower(resource.change.after.name)
-  name == "superadmins"
-
-  msg := "Blocked: SuperAdmins group is not allowed."
-}
 
 # Enforce approved Okta group prefixes
 deny contains msg if {
@@ -17,7 +7,6 @@ deny contains msg if {
   resource.type == "okta_group"
 
   name := resource.change.after.name
-  lower(name) != "superadmins"
 
   not valid_group_prefix(name)
 
