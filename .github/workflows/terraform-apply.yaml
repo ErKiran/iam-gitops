@@ -1,22 +1,20 @@
-name: Terraform Plan
+name: Terraform Apply
 
 on:
-  pull_request:
+  push:
     branches: [ "master" ]
-    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
-  pull-requests: write
 
 env:
   TF_IN_AUTOMATION: true
-  OKTA_ORG_NAME: ${{ secrets.OKTA_ORG_NAME }}
-  OKTA_BASE_URL: ${{ secrets.OKTA_BASE_URL }}
-  OKTA_API_TOKEN: ${{ secrets.OKTA_API_TOKEN }}
+  TF_VAR_okta_org_name: ${{ secrets.OKTA_ORG_NAME }}
+  TF_VAR_okta_base_url: ${{ secrets.OKTA_BASE_URL }}
+  TF_VAR_okta_api_token: ${{ secrets.OKTA_API_TOKEN }}
 
 jobs:
-  plan:
+  apply:
     runs-on: ubuntu-latest
 
     steps:
@@ -54,3 +52,6 @@ jobs:
             --input plan.json \
             "data.okta.guardrails.deny" \
             --fail-defined
+
+      - name: Terraform apply
+        run: terraform apply -input=false -auto-approve tfplan
