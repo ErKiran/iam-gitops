@@ -1,0 +1,82 @@
+name: Okta Drift Detection
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Why this drift check was triggered"
+        required: false
+      event_type:
+        description: "Okta event type"
+        required: false
+
+permissions:
+  contents: read
+
+env:
+  TF_IN_AUTOMATION: true
+  OKTA_ORG_NAME: ${{ secrets.OKTA_ORG_NAME }}
+  OKTA_BASE_URL: ${{ secrets.OKTA_BASE_URL }}
+  OKTA_API_TOKEN: ${{ secrets.OKTA_API_TOKEN }}
+
+jobs:
+  drift-detection:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.14.6
+
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Terraform plan drift check
+        id: plan
+        continue-on-error: true
+        run: |
+          terraform plan \
+            -input=false \
+            -no-color \
+            -detailed-exitcode \
+            -out=tfplan > plan.txt
+
+          echo "exitcode=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Upload plan output
+        uses: actions/upload-artifact@v4
+        with:
+          name: okta-drift-plan
+          path: plan.txt
+
+      - name: Send Slack alert when drift is detected
+        if: steps.plan.outputs.exitcode == '2'
+        run: |
+          PLAN_SUMMARY=$(sed -n '1,80p' plan.txt | sed 's/"/\\"/g')
+
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{
+              \"text\": \"IAM Drift Detected in Okta\\n\\nTrigger: ${{ github.event.inputs.reason }}\\nOkta Event: ${{ github.event.inputs.event_type }}\\nRepository: ${{ github.repository }}\\nWorkflow Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\\n\\nTerraform detected that Okta no longer matches the approved Git state.\\n\\nPlan Preview:\\n\`\`\`$PLAN_SUMMARY\`\`\`\"
+            }" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Fail workflow when drift exists
+        if: steps.plan.outputs.exitcode == '2'
+        run: |
+          echo "Drift detected."
+          exit 1
+
+      - name: Fail workflow on Terraform error
+        if: steps.plan.outputs.exitcode == '1'
+        run: |
+          echo "Terraform plan failed."
+          cat plan.txt
+          exit 1
+
+      - name: No drift found
+        if: steps.plan.outputs.exitcode == '0'
+        run: echo "No drift detected."

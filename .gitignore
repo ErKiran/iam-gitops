@@ -9,3 +9,6 @@ crash.*.log
 
 *.json
 tfplan
+
+node_modules/
+.env
