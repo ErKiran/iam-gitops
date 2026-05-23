@@ -4,6 +4,6 @@ resource "okta_group" "neobank_finance_users" {
 }
 
 resource "okta_group" "neobank_iam_users" {
-  name        = "neobank_iam_users"
+  name        = "Apps-neobank_iam_users"
   description = "Groups exclusive for IT Admins of neobank"
 }
