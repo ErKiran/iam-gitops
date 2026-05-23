@@ -48,8 +48,6 @@ app.post("/okta/events", async (req, res) => {
 
   const events = req.body?.data?.events || [];
 
-  console.log("events....", events)
-
   const interestingEvents = events.filter(event =>
     event.eventType?.includes("group") ||
     event.eventType?.includes("policy") ||
