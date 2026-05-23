@@ -15,11 +15,12 @@ permissions:
 
 env:
   TF_IN_AUTOMATION: true
+
   TF_VAR_okta_org_name: ${{ secrets.OKTA_ORG_NAME }}
   TF_VAR_okta_base_url: ${{ secrets.OKTA_BASE_URL }}
   TF_VAR_okta_api_token: ${{ secrets.OKTA_API_TOKEN }}
   TF_VAR_saml_acs_url: ${{ secrets.SAML_ACS_URL }}
-  TF_VAR_saml_entity_id: ${{secrets.SAML_ENTITY_ID }}
+  TF_VAR_saml_entity_id: ${{ secrets.SAML_ENTITY_ID }}
 
 jobs:
   drift-detection:
@@ -38,39 +39,88 @@ jobs:
       - name: Terraform init
         run: terraform init -input=false
 
+      - name: Show Terraform-managed resources
+        run: |
+          echo "Terraform-managed resources currently in state:"
+          terraform state list
+
       - name: Terraform plan drift check
         id: plan
-        continue-on-error: true
         run: |
+          set +e
+
           terraform plan \
             -input=false \
             -no-color \
             -detailed-exitcode \
             -out=tfplan > plan.txt
 
-          echo "exitcode=$?" >> "$GITHUB_OUTPUT"
+          exit_code=$?
 
-      - name: Upload plan output
+          set -e
+
+          echo "exitcode=$exit_code" >> "$GITHUB_OUTPUT"
+          echo "Terraform plan exit code: $exit_code"
+
+          if [ "$exit_code" -eq 0 ]; then
+            echo "No drift detected."
+          elif [ "$exit_code" -eq 2 ]; then
+            echo "Drift detected."
+          else
+            echo "Terraform plan failed."
+          fi
+
+          exit 0
+
+      - name: Export plan JSON
+        if: steps.plan.outputs.exitcode == '2'
+        run: terraform show -json tfplan > plan.json
+
+      - name: Create drift summary
+        if: steps.plan.outputs.exitcode == '2'
+        id: drift_summary
+        run: |
+          echo "Creating drift summary from Terraform plan..."
+
+          RESOURCE_CHANGES=$(jq -r '
+            .resource_changes[]
+            | select(.change.actions != ["no-op"])
+            | "- " + .address + " => " + (.change.actions | join(","))
+          ' plan.json | head -30)
+
+          if [ -z "$RESOURCE_CHANGES" ]; then
+            RESOURCE_CHANGES="Terraform detected changes, but no resource-level summary was available."
+          fi
+
+          {
+            echo "summary<<EOF"
+            echo "$RESOURCE_CHANGES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload drift artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: okta-drift-plan
-          path: plan.txt
+          path: |
+            plan.txt
+            plan.json
+          if-no-files-found: ignore
 
       - name: Send Slack alert when drift is detected
         if: steps.plan.outputs.exitcode == '2'
         run: |
-          PLAN_SUMMARY=$(sed -n '1,80p' plan.txt | sed 's/"/\\"/g')
-
           curl -X POST -H 'Content-type: application/json' \
             --data "{
-              \"text\": \"IAM Drift Detected in Okta\\n\\nTrigger: ${{ github.event.inputs.reason }}\\nOkta Event: ${{ github.event.inputs.event_type }}\\nRepository: ${{ github.repository }}\\nWorkflow Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\\n\\nTerraform detected that Okta no longer matches the approved Git state.\\n\\nPlan Preview:\\n\`\`\`$PLAN_SUMMARY\`\`\`\"
+              \"text\": \"IAM Drift Detected in Okta\n\nTrigger: ${{ github.event.inputs.reason }}\nOkta Event: ${{ github.event.inputs.event_type }}\nRepository: ${{ github.repository }}\nWorkflow Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\nTerraform detected that Okta no longer matches the approved Git state.\n\nManaged resources with changes:\n\`\`\`${{ steps.drift_summary.outputs.summary }}\`\`\`\"
             }" \
-            ${{ secrets.SLACK_WEBHOOK_URL }}
+            "${{ secrets.SLACK_WEBHOOK_URL }}"
 
       - name: Fail workflow when drift exists
         if: steps.plan.outputs.exitcode == '2'
         run: |
-          echo "Drift detected."
+          echo "Drift detected in Terraform-managed resources."
           exit 1
 
       - name: Fail workflow on Terraform error
@@ -82,4 +132,4 @@ jobs:
 
       - name: No drift found
         if: steps.plan.outputs.exitcode == '0'
-        run: echo "No drift detected."
+        run: echo "No drift detected in Terraform-managed resources."
