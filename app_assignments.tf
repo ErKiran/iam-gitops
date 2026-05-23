@@ -1,8 +1,7 @@
-resource "okta_group_rule" "neobank_iam_it_users_rule" {
-  name              = "Assign IAM Admin to Neobank"
-  status            = "ACTIVE"
-  group_assignments = [okta_group.neobank_iam_it_users.id]
+resource "okta_app_group_assignments" "tellers_to_neobank_gitops" {
+  app_id   = okta_app_saml.neobank_gitOps.id
+  group {
+    id = okta_group.neobank_teller_group.id
+  }
 
-  expression_type  = "urn:okta:expression:1.0"
-  expression_value = "String.stringContains(user.department,\"IT\")"
 }
