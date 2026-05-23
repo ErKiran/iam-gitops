@@ -13,3 +13,13 @@ variable "okta_api_token" {
   type        = string
   sensitive   = true
 }
+
+variable "saml_acs_url" {
+  type        = string
+  description = "ACS url for the neobank application for the single sign on"
+}
+
+variable "saml_entity_id" {
+  type        = string
+  description = "Neobank Entity ID"
+}

@@ -18,6 +18,8 @@ env:
   TF_VAR_okta_org_name: ${{ secrets.OKTA_ORG_NAME }}
   TF_VAR_okta_base_url: ${{ secrets.OKTA_BASE_URL }}
   TF_VAR_okta_api_token: ${{ secrets.OKTA_API_TOKEN }}
+  TF_VAR_saml_acs_url: ${{ secrets.SAML_ACS_URL }}
+  TF_VAR_saml_entity_id: ${{secrets.SAML_ENTITY_ID }}
 
 jobs:
   drift-detection:
