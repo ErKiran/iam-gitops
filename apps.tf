@@ -3,7 +3,7 @@ data "okta_app" "neobank" {
 }
 
 resource "okta_app_saml" "neobank_gitOps" {
-  label                    = "Neobank Application - Managed by Tf"
+  label                    = "Neobank Application-GitOps"
   sso_url                  = var.saml_acs_url
   recipient                = var.saml_acs_url
   destination              = var.saml_acs_url
