@@ -9,9 +9,16 @@ permissions:
 
 env:
   TF_IN_AUTOMATION: true
+
+  # Terraform Cloud / HCP Terraform authentication
+  TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+
+  # Okta provider variables
   TF_VAR_okta_org_name: ${{ secrets.OKTA_ORG_NAME }}
   TF_VAR_okta_base_url: ${{ secrets.OKTA_BASE_URL }}
   TF_VAR_okta_api_token: ${{ secrets.OKTA_API_TOKEN }}
+
+  # Slack
   SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
 jobs:
@@ -86,7 +93,11 @@ jobs:
             APPLY_SUMMARY="Terraform apply completed, but no resource summary was found."
           fi
 
-          echo "summary=$APPLY_SUMMARY" >> "$GITHUB_OUTPUT"
+          {
+            echo "summary<<EOF"
+            echo "$APPLY_SUMMARY"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Notify Slack
         if: success()
