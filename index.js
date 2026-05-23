@@ -1,5 +1,6 @@
 const express=  require("express");
-
+const dotenv = require("dotenv")
+dotenv.config();
 const app = express();
 app.use(express.json());
 
@@ -47,6 +48,8 @@ app.post("/okta/events", async (req, res) => {
 
   const events = req.body?.data?.events || [];
 
+  console.log("events....", events)
+
   const interestingEvents = events.filter(event =>
     event.eventType?.includes("group") ||
     event.eventType?.includes("policy") ||
@@ -92,7 +95,7 @@ Note: This does not mean drift is confirmed yet. Terraform plan will verify whet
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        ref: "main",
+        ref: "master",
         inputs: {
           reason: "Okta change event detected",
           event_type: eventType
