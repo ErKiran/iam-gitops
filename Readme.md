@@ -12,6 +12,11 @@ This project demonstrates how modern IAM infrastructure can be managed using:
 
 ![GitOps](gitops.png)
 
+## Demo Video
+
+[![IAM GitOps Demo](https://img.youtube.com/vi/HMLmq9Ye0Ow/maxresdefault.jpg)](https://youtu.be/HMLmq9Ye0Ow)
+
+Watch the full demo: [IAM GitOps Demo](https://youtu.be/HMLmq9Ye0Ow)
 ---
 
 # Architecture
