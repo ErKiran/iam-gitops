@@ -2,7 +2,7 @@ terraform {
 
 
   cloud {
-    
+
     organization = "iamgitops"
 
     workspaces {
