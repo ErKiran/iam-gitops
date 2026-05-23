@@ -4,7 +4,7 @@ resource "okta_app_group_assignment" "finance_users_to_neobank" {
 }
 
 resource "okta_group_rule" "neobank_iam_admin_users_rule" {
-  name              = "Assign IAM Admin  users to the neobank admin groups"
+  name              = "Assign IAM Admin to Neobank"
   status            = "ACTIVE"
   group_assignments = [okta_group.neobank_iam_users.id]
 
